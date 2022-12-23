@@ -40,7 +40,7 @@ jobs:
                 julia -e 'using Pkg
                   Pkg.activate(mktempdir())
                   Pkg.add([
-                    Pkg.PackageSpec(name="PlutoSliderServer", ref="static-export-1"),
+                    Pkg.PackageSpec(name="PlutoSliderServer", rev="static-export-1"),
                   ])
                   import PlutoSliderServer
                   PlutoSliderServer.github_action(".";
