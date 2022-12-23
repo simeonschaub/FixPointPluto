@@ -15,10 +15,18 @@ macro bind(def, element)
 end
 
 # ╔═╡ 64a8efc4-81ff-11ed-3b66-d14972caa73b
-using Plots, PlutoUI, NLsolve, ForwardDiff
+using Plots, PlutoUI, NLsolve, ForwardDiff, LaTeXStrings
 
 # ╔═╡ bdd017b3-9a94-48b0-bc62-fae56967ed6f
 f(x) = cospi(2x)
+
+# ╔═╡ 572c1b77-4941-4aed-9a29-9055ece9b840
+md"""
+# Fixpunkt-Iteration
+
+Zu lösen: $x_\text{fix} = f(x_\text{fix})$
+
+Starte mit beliebigem $x_0$ und berechne $x_{n+1} = f(x_n)$ solange bis Fixpunkt (annähernd) erreicht"""
 
 # ╔═╡ e74e317c-39d9-4a2a-a274-acb3f61b36d1
 function n_iters(f, x₀::T, N) where {T}
@@ -34,36 +42,30 @@ end
 @bind y₀ Slider(range(0, 2; length=101); show_value=true)
 
 # ╔═╡ ad20887b-6991-4261-9d60-3b93f15f5d51
-plot(n_iters(f, y₀, 20); legend=false, ylims=(-1, 2))
+plot(n_iters(f, y₀, 20); legend=false, ylims=(-1, 2), title=L"Fixpunkt-Iteration $f(y) = \cos(2\pi y)$ mit $y_0 = %$(y₀)$")
 
 # ╔═╡ 58845f31-e28b-4c0a-8c1e-87725baf74ac
 begin
-	plot(n_iters(f, .74, 20); legend=false)
-	plot!(n_iters(f, .8, 20))
+	plot(n_iters(f, .74, 20); label=L"y_0 = 0.74")
+	plot!(n_iters(f, .8, 20); label=L"y_0 = 0.8")
 end
 
 # ╔═╡ b06f189b-2538-4e57-b59c-8b04e61f454d
 let
 	f(x, K) = K/2π * cospi(2x)
-	plot(; legend=false)
+	plot(; title=L"Bifurkationsdiagramm für $f(y) = \frac{K}{2\pi} \cos(2\pi y)$")
 	N = 10000
 	K = range(0, 2.1; length=100)
 	y = fill(.1, length(K))
 	for i in 1:N
 		y .= f.(y, K)
-		i > .9N && plot!(K, y; color=1, lw=.1)
+		i > .9N && plot!(K, y; color=1, lw=.1, label=false)
 	end
 	global x_fix = [nlsolve(x -> [f(x[], K) - x[]], [0.]).zero[] for K in K]
 	global banach = map(K, x_fix) do K, x_fix
 		ForwardDiff.derivative(x -> f(x, K), x_fix) |> abs
 	end
-	plot!(K, x_fix; line = :dash, lw=1.5, color=2)
-end
-
-# ╔═╡ 678dc157-b5b0-4d53-884f-421bf10ec3df
-let
-	K = range(0, 2.1; length=100)
-	plot(K, banach; line=:dash, lw=3, color=3, legend=false)
+	plot!(K, x_fix; line = :dash, lw=1.5, color=2, label=L"y_\mathrm{fix}(K)")
 end
 
 # ╔═╡ b418e7a8-a173-4e6d-9712-74fa2be44ff7
@@ -71,12 +73,42 @@ end
 
 # ╔═╡ bd6f17aa-a87a-489f-8140-d24833577037
 let
-	plot(identity, -1, 1; legend=false)
-	plot!(x -> K/2π * cospi(2x))
+	plot(identity, -1, 1; label=false, title=L"Lösung von $y_\mathrm{fix} = K/2\pi\cos(2\pi y_\mathrm{fix})$")
+	plot!(x -> K/2π * cospi(2x); label=false)
 	z = nlsolve(x -> [K/2π * cospi(2x[]) - x[]], [0.]).zero
-	@show z[]
-	scatter!(z, [K/2π * cospi(2z[])])
+	scatter!(z, [K/2π * cospi(2z[])]; label=L"y_\mathrm{fix} = %$(z[])")
 end
+
+# ╔═╡ dd6c1b15-afe8-49ad-bfed-e5f1c5d66ed2
+md"""
+Wir stellen fest, dass für $K > 1.3$ der Fixpunkt nicht erreicht wird. Warum?
+
+Betrachte $x_n$ nahe dem Fixpunkt, d.h. $x_n = x_\text{fix} + \epsilon$. Dann
+
+$x_\text{fix} + \epsilon \ \ \mapsto \ \ x_{n+1} = f(x_\text{fix} + \epsilon) \approx f(x_\text{fix}) + \epsilon f^\prime(x_\text{fix}) = x_\text{fix} + \epsilon f^\prime(x_\text{fix})$
+
+Das heißt falls $|f^\prime(x_\text{fix})| < 1$ wird $\epsilon$ kleiner, $x_{n+1}$ nähert sich dem Fixpunkt. Fixpunkt ist *attraktiv*.
+
+Falls jedoch $|f^\prime(x_\text{fix})| > 1$ ist i.A. $\lim_{n \rightarrow \infty} x_n \neq x_\text{fix}$, da sich $x_{n+1}$ nahe dem Fixpunkt vom Fixpunkt wegbewegt. 
+
+Dieses Kriterium ist der *Fixpunktsatz von Banach*.
+"""
+
+# ╔═╡ 678dc157-b5b0-4d53-884f-421bf10ec3df
+let
+	K = range(0, 2.1; length=100)
+	plot(K, banach; line=:dash, lw=3, color=3, label=L"Banachkriterium $|f^\prime(y_\mathrm{fix})|$")
+	plot!(x -> 1; label=L"|f^\prime(y_\mathrm{fix})| = 1")
+end
+
+# ╔═╡ 103b9c49-82fb-431c-b5b5-f94ff6d26073
+md"""
+# Newton-Verfahren
+
+Fixpunkt-Iteration findet Nullstellen von $f(x)$ durch iteratives Verfahren $x_{n+1} = x_n - f(x_n)$. Wie oben festgestellt kann das jedoch schiefgehen falls die erste Ableitung an der Nullstelle zu groß ist.
+
+Das Newton-Verfahren iteriert hingegen mit $x_{n+1} = x_n - \frac{f(x_n)}{f^\prime(x_{n})}$. Mithilfe des Banachkriteriums lässt sich überprüfen dass $g^\prime(x_\text{fix}) = \mathcal O(\epsilon)$. Außer in speziellen Ausnahmefällen findet das Newton-Verfahren also robust Nullstellen einer allgemeinen kontinuierlichen Funktion $f$.
+"""
 
 # ╔═╡ 554e9805-b460-4aa0-8d64-970d3252abec
 function newton(f, x₀::T, N) where {T}
@@ -92,35 +124,37 @@ end
 # ╔═╡ fc177ff5-a7b5-4ef5-bda1-88c7242c95d9
 let
 	f(x, K=2.1) = K/2π * cospi(2x)
-	plot(n_iters(f, .1, 20); legend=false)
-	plot!(newton(f, .1, 20))
+	plot(n_iters(f, .1, 20); title=L"Löse $f(y) = \frac{2.1}{2\pi}\cos(2\pi y)$ mit $y_0 = 0.1$", label="Fixpunkt-Iteration")
+	plot!(newton(f, .1, 20); label="Newton-Verfahren")
 end
 
 # ╔═╡ 274ef3f7-f602-4eb8-a7bc-c21c3a050845
 let
 	f(x, K) = K/2π * cospi(2x) - x
 	f′(x, K) = ForwardDiff.derivative(x -> f(x, K), x)
-	plot(; legend=false)
+	plot(; title=L"$y_\mathrm{fix} = \frac{K}{2\pi} \cos(2\pi y_\mathrm{fix})$ gelöst mit Newton-Verfahren")
 	N = 10000
 	K = range(0, 2.1; length=100)
 	y = fill(.1, length(K))
 	for i in 1:N
 		y .-= f.(y, K) ./ f′.(y, K)
-		i > .9N && plot!(K, y; color=1, lw=.1)
+		i > .9N && plot!(K, y; color=1, lw=.1, label=false)
 	end
-	plot!(K, [nlsolve(x -> [f(x[], K)], [0.]).zero[] for K in K]; line = :dash, lw=1.5, color=2)
+	plot!(K, [nlsolve(x -> [f(x[], K)], [0.]).zero[] for K in K]; line = :dash, lw=1.5, color=2, label=L"y_\mathrm{fix}(K)")
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 NLsolve = "2774e3e8-f4cf-5e23-947b-6d7e65073b56"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 
 [compat]
 ForwardDiff = "~0.10.34"
+LaTeXStrings = "~1.3.0"
 NLsolve = "~4.5.1"
 Plots = "~1.38.0"
 PlutoUI = "~0.7.49"
@@ -132,7 +166,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.8.3"
 manifest_format = "2.0"
-project_hash = "ede00c596b5fbc4696c8d82bb52e669ed54cc82b"
+project_hash = "09a55c0d47941bee11a4d97e7c7581a92a33b7c8"
 
 [[deps.AbstractPlutoDingetjes]]
 deps = ["Pkg"]
@@ -980,9 +1014,9 @@ version = "1.25.0+0"
 
 [[deps.XML2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Libiconv_jll", "Pkg", "Zlib_jll"]
-git-tree-sha1 = "58443b63fb7e465a8a7210828c91c08b92132dff"
+git-tree-sha1 = "93c41695bc1c08c46c5899f4fe06d6ead504bb73"
 uuid = "02c8fc9c-b97f-50b9-bbe4-9be30ff0a78a"
-version = "2.9.14+0"
+version = "2.10.3+0"
 
 [[deps.XSLT_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Libgcrypt_jll", "Libgpg_error_jll", "Libiconv_jll", "Pkg", "XML2_jll", "Zlib_jll"]
@@ -1200,14 +1234,17 @@ version = "1.4.1+0"
 # ╔═╡ Cell order:
 # ╠═64a8efc4-81ff-11ed-3b66-d14972caa73b
 # ╠═bdd017b3-9a94-48b0-bc62-fae56967ed6f
+# ╟─572c1b77-4941-4aed-9a29-9055ece9b840
 # ╠═e74e317c-39d9-4a2a-a274-acb3f61b36d1
 # ╠═21b30552-f4c7-42eb-a0c6-34f558b2706d
 # ╠═ad20887b-6991-4261-9d60-3b93f15f5d51
 # ╠═58845f31-e28b-4c0a-8c1e-87725baf74ac
 # ╠═b06f189b-2538-4e57-b59c-8b04e61f454d
-# ╠═678dc157-b5b0-4d53-884f-421bf10ec3df
 # ╠═b418e7a8-a173-4e6d-9712-74fa2be44ff7
 # ╠═bd6f17aa-a87a-489f-8140-d24833577037
+# ╟─dd6c1b15-afe8-49ad-bfed-e5f1c5d66ed2
+# ╠═678dc157-b5b0-4d53-884f-421bf10ec3df
+# ╟─103b9c49-82fb-431c-b5b5-f94ff6d26073
 # ╠═554e9805-b460-4aa0-8d64-970d3252abec
 # ╠═fc177ff5-a7b5-4ef5-bda1-88c7242c95d9
 # ╠═274ef3f7-f602-4eb8-a7bc-c21c3a050845
