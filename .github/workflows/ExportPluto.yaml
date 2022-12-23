@@ -40,7 +40,7 @@ jobs:
                 julia -e 'using Pkg
                   Pkg.activate(mktempdir())
                   Pkg.add([
-                    Pkg.PackageSpec(name="PlutoSliderServer", version="0.3.2-0.3"),
+                    Pkg.PackageSpec(name="PlutoSliderServer", ref="static-export-1"),
                   ])
                   import PlutoSliderServer
                   PlutoSliderServer.github_action(".";
@@ -48,6 +48,7 @@ jobs:
                     Export_baked_notebookfile=true,
                     Export_baked_state=true,
                     # more parameters can go here
+                    Precompute_enabled=true,
                   )'
             - name: Deploy to gh-pages
               uses: JamesIves/github-pages-deploy-action@releases/v4
